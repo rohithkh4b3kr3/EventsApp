@@ -175,3 +175,33 @@ export const getUserPosts = async (req, res) => {
     res.status(500).json({ msg: "Server Error", success: false });
   }
 };
+
+
+// GET POSTS OF FOLLOWED USERS
+export const getFollowingPosts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const loggedInUser = await User.findById(userId);
+
+    if (!loggedInUser) {
+      return res.status(404).json({ msg: "User not found", success: false });
+    }
+
+    const followingUserPosts = await Promise.all(
+      loggedInUser.following.map((otherUserId) => {
+        return Post.find({ userId: otherUserId }).sort({ createdAt: -1 });
+      })
+    );
+
+    const allPosts = followingUserPosts.flat();
+
+    res.status(200).json({
+      msg: "Following users' posts fetched successfully",
+      success: true,
+      posts: allPosts,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Server Error", success: false });
+  }
+};
