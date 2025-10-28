@@ -8,6 +8,7 @@ import {
   getAllPosts,
   getPostById,
   getUserPosts,
+  getFollowingPosts,
   
   
 } from "../controllers/postController.js";
@@ -23,6 +24,8 @@ router.put("/bookmark/:id", isAuthenticated, bookmarkPost);
 router.get("/all", isAuthenticated, getAllPosts);
 router.get("/:id", isAuthenticated, getPostById);
 router.get("/user/:userId", isAuthenticated, getUserPosts);
+router.get("/followingpost/:id", isAuthenticated, getFollowingPosts);
+
 // router.get("/user/:userId", isAuthenticated, getUserProfile);
 // router.get("/profile/:id",getOtherProfile);
 
