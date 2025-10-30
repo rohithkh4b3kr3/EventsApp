@@ -205,3 +205,38 @@ export const getFollowingPosts = async (req, res) => {
     res.status(500).json({ msg: "Server Error", success: false });
   }
 };
+
+// Share Post
+
+export const sharePost =async (req , res) =>{
+
+  try{
+      const userId = req.user._id;
+      const PostId = req.params.id;
+      const{ description } = req.body;
+      
+      const originalPost = await Post.findById(PostId);
+
+      if(!orginalPost) {
+        return res.status(404).json({ msg: "Original post not found", success: false });  
+      }
+      // create shared post
+      const sharedPost = await Post.create({
+        description: description || originalPost.description,
+        image: originalPost.image,
+        userId: userId,
+        sharedFrom: PostId,
+      }
+    );
+      res.status(201).json({
+        msg: "Post shared successfully", success: true,
+        post: sharedPost,
+      })
+
+    }
+  catch(error){
+      console.error(error);
+      res.status(500).json({ msg: "Server Error", success: false });
+
+  }
+}
