@@ -10,15 +10,15 @@ export default function Home() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   const fetchPosts = async () => {
     setLoading(true);
-    setError("");
     try {
       const res = await axios.get("/post/all");
       setPosts(res.data.posts || []);
-    } catch (err) {
-      setError("Unable to load events. Try again.");
+    } catch {
+      setError("Could not load posts, try again later.");
     } finally {
       setLoading(false);
     }
@@ -26,93 +26,128 @@ export default function Home() {
 
   useEffect(() => {
     if (user) fetchPosts();
-    else setPosts([]);
   }, [user]);
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh] animate-pulse text-slate-500">
-        Preparing your feed...
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-emerald-600 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="max-w-3xl mx-auto py-20 px-6">
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-md border border-slate-100 p-10 text-center">
-          <p className="text-sm uppercase tracking-wide text-emerald-600 font-semibold">
-            IITM Events
-          </p>
-          <h1 className="text-4xl font-extrabold text-slate-900 leading-tight mt-3">
-            Share & discover campus events <br /> all in one place.
-          </h1>
-          <p className="text-slate-600 mt-4 text-lg">
-            Host workshops, meetups, competitions and more. Join now to create, like, and bookmark events.
-          </p>
-
-          <div className="flex gap-4 justify-center mt-8">
-            <Link
-              to="/register"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl shadow-lg transition font-medium"
-            >
-              Create your account
-            </Link>
-            <Link
-              to="/login"
-              className="border border-slate-300 px-6 py-3 rounded-xl text-slate-700 hover:border-emerald-500 hover:text-emerald-700 transition font-medium"
-            >
-              Sign in
-            </Link>
-          </div>
-        </div>
+      <div className="flex flex-col items-center justify-center h-screen text-center px-6">
+        <h1 className="text-5xl font-extrabold text-white tracking-tight">
+          Explore <span className="text-emerald-500">Campus Events</span>
+        </h1>
+        <p className="text-slate-400 text-lg max-w-xl mt-4">
+          Sign in to create, discover, and bookmark activities around campus.
+        </p>
+        <Link
+          to="/login"
+          className="mt-8 px-10 py-4 rounded-2xl bg-emerald-600 text-white font-bold shadow-xl hover:scale-105 transition-all"
+        >
+          Get Started
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-6 mb-12 space-y-6 px-4">
-      <CreatePost onPostCreated={fetchPosts} />
+    <div className="max-w-7xl mx-auto px-6 py-10 animate-fade-in">
 
-      {/* Loading skeleton */}
-      {loading && (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
+      {/* GRID LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+        {/* FEED AREA */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {loading && (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="animate-pulse h-40 bg-slate-800/50 rounded-2xl border border-slate-700"
+                />
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-rose-800/40 border border-rose-700 text-rose-300 p-4 rounded-xl">
+              {error}
+            </div>
+          )}
+
+          {!loading && posts.length === 0 && (
+            <div className="bg-slate-900/40 border border-slate-700 p-16 text-center rounded-2xl shadow-xl">
+              <p className="text-2xl text-white font-bold mb-2">No posts yet</p>
+              <p className="text-slate-400">Be the first to share something.</p>
+            </div>
+          )}
+
+          {posts.map((post, index) => (
             <div
-              key={i}
-              className="animate-pulse bg-white h-28 rounded-xl border border-slate-200 shadow-sm"
-            />
+              key={post._id}
+              className="animate-slide-up"
+              style={{ animationDelay: `${index * 70}ms` }}
+            >
+              <PostCard post={post} onRefresh={fetchPosts} />
+            </div>
           ))}
-        </div>
-      )}
 
-      {/* Error state */}
-      {error && (
-        <div className="bg-rose-50 text-rose-700 border border-rose-200 rounded-xl p-4 shadow-sm flex justify-between items-center">
-          <span>{error}</span>
+        </div>
+
+        {/* SIDEBAR */}
+        <aside className="hidden lg:flex flex-col gap-6 sticky top-24 h-fit">
+
+          <div className="bg-slate-900/40 border border-slate-700 rounded-2xl shadow-xl p-6 text-center">
+            <div className="h-16 w-16 mx-auto rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
+              {user.name?.[0] || user.username?.[0]}
+            </div>
+            <h2 className="text-xl font-bold text-white mt-3">{user.name}</h2>
+            <p className="text-slate-400">@{user.username}</p>
+          </div>
+
           <button
-            onClick={fetchPosts}
-            className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm"
+            onClick={() => setShowCreate(true)}
+            className="py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold hover:scale-105 shadow-xl transition-all"
           >
-            Retry
+            + Create Post
           </button>
+        </aside>
+
+      </div>
+
+      {/* Floating Create Button Mobile */}
+      <button
+        className="lg:hidden fixed bottom-6 right-6 h-16 w-16 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-3xl shadow-2xl flex items-center justify-center"
+        onClick={() => setShowCreate(true)}
+      >
+        +
+      </button>
+
+      {/* MODAL FOR CREATE POST */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900/70 border border-slate-700 rounded-2xl p-6 max-w-xl w-full shadow-xl">
+            <CreatePost
+              onPostCreated={() => {
+                fetchPosts();
+                setShowCreate(false);
+              }}
+            />
+            <button
+              onClick={() => setShowCreate(false)}
+              className="text-slate-300 mt-4 hover:text-white transition-all"
+            >
+              Close ✖
+            </button>
+          </div>
         </div>
       )}
-
-      {/* Empty state */}
-      {!loading && posts.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
-          <p className="text-xl font-semibold text-slate-800">
-            No events posted yet 👀
-          </p>
-          <p className="text-slate-500 mt-2">Be the first to share something!</p>
-        </div>
-      )}
-
-      {/* Posts */}
-      {posts.map((post) => (
-        <PostCard key={post._id} post={post} onRefresh={fetchPosts} />
-      ))}
     </div>
   );
 }

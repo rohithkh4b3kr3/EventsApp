@@ -47,48 +47,69 @@ export default function CreatePost({ onPostCreated }) {
   if (!user) return null;
 
   return (
-    <div className="bg-white p-4 shadow-sm rounded-xl border border-slate-100 mb-6">
-      <div className="flex gap-3">
-        <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold uppercase">
+    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-6 shadow-lg rounded-2xl border border-slate-200/50 dark:border-slate-700/50 mb-6 hover-lift relative overflow-hidden">
+      {/* Gradient accent */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600"></div>
+      
+      <div className="flex gap-4">
+        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center font-bold uppercase text-white shadow-md flex-shrink-0">
           {user.name?.[0] || user.username?.[0] || "U"}
         </div>
         <div className="flex-1">
           <textarea
-            className="w-full border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition rounded-lg p-3 outline-none min-h-[90px] resize-none"
-            placeholder="Share event details…"
+            className="w-full border-2 border-slate-200 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 transition-all duration-200 rounded-xl p-4 outline-none min-h-[120px] resize-none text-[15px] font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            placeholder="What's happening? Share event details…"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
 
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <label className="inline-flex items-center gap-2 text-sm text-emerald-700 cursor-pointer">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 cursor-pointer group">
               <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              <span className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50">
+              <span className="px-4 py-2.5 rounded-xl border-2 border-emerald-200 dark:border-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800/40 dark:hover:to-emerald-700/40 transition-all duration-200 shadow-sm hover:shadow-md group-hover:scale-105">
                 Attach image
               </span>
-              {imageFile && <span className="text-slate-500 truncate max-w-[180px]">{imageFile.name}</span>}
+              {imageFile && (
+                <span className="text-slate-600 truncate max-w-[200px] font-medium text-sm">
+                  {imageFile.name}
+                </span>
+              )}
             </label>
 
             <button
               onClick={submit}
-              disabled={loading}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg shadow-sm transition"
+              disabled={loading || !description.trim()}
+              className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-60 hover:scale-105"
             >
-              {loading ? "Posting..." : "Post update"}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Posting...
+                </span>
+              ) : (
+                "Post Event"
+              )}
             </button>
           </div>
 
           {previewUrl && (
-            <div className="mt-3">
+            <div className="mt-4 rounded-xl overflow-hidden border-2 border-slate-200 shadow-md">
               <img
                 src={previewUrl}
                 alt="Preview"
-                className="rounded-lg border border-slate-100 max-h-64 object-cover w-full"
+                className="w-full max-h-80 object-cover"
               />
             </div>
           )}
 
-          {error && <p className="text-sm text-rose-600 mt-2">{error}</p>}
+          {error && (
+            <div className="mt-3 bg-rose-50 dark:bg-rose-900/30 border-2 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-4 py-2.5 rounded-xl text-sm font-medium">
+              {error}
+            </div>
+          )}
         </div>
       </div>
     </div>

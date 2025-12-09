@@ -1,7 +1,7 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import IITMLogo from "../assets/iitm.png"; // update if your path differs
+import IITMLogo from "../assets/iitm.png";
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
@@ -14,60 +14,92 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full px-6 md:px-10 py-3 flex items-center justify-between bg-white/95 backdrop-blur-xl shadow-sm sticky top-0 z-50 border-b border-slate-200">
-      
-      {/* Left Section with Logo */}
-      <Link to="/" className="flex items-center gap-3">
-        <img
-          src={IITMLogo}
-          alt="IITM Logo"
-          className="h-9 w-9 rounded-md object-cover shadow-sm"
-        />
+    <nav className="w-full px-5 md:px-10 py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-2xl bg-slate-900/60 border-b border-slate-800 shadow-xl">
+
+      {/* Brand */}
+      <Link to="/" className="flex items-center gap-3 group select-none">
+        <div className="relative">
+          <img
+            src={IITMLogo}
+            alt="IITM Logo"
+            className="h-10 w-10 rounded-xl object-cover shadow-md transition-all duration-300 group-hover:scale-110"
+          />
+        </div>
+
         <div>
-          <p className="text-xl font-extrabold text-slate-900">Events Hub</p>
-          <p className="text-xs text-slate-500 -mt-1 tracking-wide">IIT Madras</p>
+          <p className="text-xl font-extrabold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent tracking-tight">
+            Events Hub
+          </p>
+          <p className="text-[11px] text-slate-400 tracking-wider font-medium -mt-1">IIT Madras</p>
         </div>
       </Link>
 
       {/* Desktop Menu */}
-      <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-        <Link to="/" className="text-slate-700 hover:text-emerald-600 transition">Home</Link>
+      <div className="hidden md:flex items-center gap-1 text-sm font-medium">
 
-        {user ? (
+        <Link
+          to="/"
+          className="px-4 py-2 rounded-xl text-slate-300 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200"
+        >
+          Home
+        </Link>
+
+        {user && (
           <>
             <Link
+              to="/favorites"
+              className="px-4 py-2 rounded-xl text-slate-300 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200"
+            >
+              Favorites
+            </Link>
+
+            <Link
               to={`/profile/${user._id}`}
-              className="text-slate-700 hover:text-emerald-600 transition"
+              className="px-4 py-2 rounded-xl text-slate-300 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200"
             >
               Profile
             </Link>
 
+            <Link
+              to="/settings"
+              className="px-4 py-2 rounded-xl text-slate-300 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200"
+            >
+              Settings
+            </Link>
+          </>
+        )}
+
+        {user ? (
+          <>
             {/* Avatar */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full border border-slate-200">
-              <span className="h-8 w-8 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-semibold uppercase">
+            <div className="flex items-center gap-2 ml-3 px-3 py-1.5 bg-slate-800/60 rounded-2xl border border-slate-700 shadow-md">
+              <span className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-bold uppercase">
                 {user.name?.[0] || user.username?.[0] || "U"}
               </span>
-              <div className="leading-tight text-sm">
-                <p className="font-semibold text-slate-900">{user.name}</p>
-                <p className="text-xs text-slate-500">@{user.username}</p>
-              </div>
+              <p className="text-slate-300 font-semibold hidden lg:block">
+                {user.name}
+              </p>
             </div>
 
             <button
               onClick={handleLogout}
-              className="bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg transition shadow-sm"
+              className="ml-2 px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:border-emerald-500 hover:text-emerald-400 hover:bg-emerald-900/20 transition-all duration-200 shadow-sm"
             >
               Logout
             </button>
           </>
         ) : (
           <>
-            <Link to="/login" className="text-slate-700 hover:text-emerald-600 transition">
+            <Link
+              to="/login"
+              className="px-4 py-2 rounded-xl text-slate-300 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200"
+            >
               Login
             </Link>
+
             <Link
               to="/register"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg shadow-sm"
+              className="ml-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold shadow-md hover:scale-105 hover:shadow-lg transition-all"
             >
               Get Started
             </Link>
@@ -77,37 +109,49 @@ export default function Navbar() {
 
       {/* Mobile Menu Button */}
       <button
-        className="md:hidden text-slate-700"
+        className="md:hidden p-2 rounded-lg text-slate-300 hover:bg-slate-800/60 transition-all"
         onClick={() => setMenuOpen(!menuOpen)}
       >
-        {menuOpen ? "✖" : "☰"}
+        <svg className="w-6 h-6" fill="none" stroke="currentColor">
+          {menuOpen ? (
+            <path strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
       </button>
 
-      {/* Mobile Dropdown */}
+      {/* Mobile Dropdown Menu */}
       {menuOpen && (
-        <div className="absolute top-16 right-4 bg-white shadow-xl rounded-xl border border-slate-200 px-6 py-4 flex flex-col gap-3 w-48 md:hidden z-40">
-          <Link to="/" onClick={() => setMenuOpen(false)} className="hover:text-emerald-600">Home</Link>
+        <div className="absolute top-full left-0 right-0 mx-4 mt-3 p-4 flex flex-col gap-2 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 shadow-2xl animate-slide-up">
+          <Link to="/" onClick={() => setMenuOpen(false)} className="px-4 py-2 rounded-xl text-slate-300 hover:bg-emerald-600/20 transition-all">
+            Home
+          </Link>
 
           {user ? (
             <>
-              <Link to={`/profile/${user._id}`} onClick={() => setMenuOpen(false)} className="hover:text-emerald-600">
+              <Link to="/favorites" onClick={() => setMenuOpen(false)} className="px-4 py-2 rounded-xl text-slate-300 hover:bg-emerald-600/20 transition-all">
+                Favorites
+              </Link>
+              <Link to={`/profile/${user._id}`} onClick={() => setMenuOpen(false)} className="px-4 py-2 rounded-xl text-slate-300 hover:bg-emerald-600/20 transition-all">
                 Profile
               </Link>
+              <Link to="/settings" onClick={() => setMenuOpen(false)} className="px-4 py-2 rounded-xl text-slate-300 hover:bg-emerald-600/20 transition-all">
+                Settings
+              </Link>
               <button
-                onClick={handleLogout}
-                className="text-left border border-emerald-600 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg"
+                onClick={() => { handleLogout(); setMenuOpen(false); }}
+                className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500 transition-all"
               >
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" onClick={() => setMenuOpen(false)}>Login</Link>
-              <Link
-                to="/register"
-                onClick={() => setMenuOpen(false)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg"
-              >
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="px-4 py-2 rounded-xl text-slate-300 hover:bg-emerald-600/20 transition-all">
+                Login
+              </Link>
+              <Link to="/register" onClick={() => setMenuOpen(false)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold text-center">
                 Get Started
               </Link>
             </>

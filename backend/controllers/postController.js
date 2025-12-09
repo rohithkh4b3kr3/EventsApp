@@ -135,16 +135,8 @@ export const bookmarkPost = async (req, res) => {
 // GET ALL POSTS
 export const getAllPosts = async (req, res) => {
   try {
-    const userId = req.user._id;
-
-    const loggedInUser = await User.findById(userId);
-    if (!loggedInUser) {
-      return res.status(404).json({ msg: "User not found", success: false });
-    }
-
-    const followingIds = [...loggedInUser.following, userId];
-
-    const posts = await Post.find({ userId: { $in: followingIds } })
+    // Fetch all posts from all users (for events discovery)
+    const posts = await Post.find({})
       .populate("userId", "name username")
       .sort({ createdAt: -1 });
 
@@ -203,6 +195,26 @@ export const getFollowingPosts = async (req, res) => {
       msg: "Following users' posts fetched successfully",
       success: true,
       posts: allPosts,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Server Error", success: false });
+  }
+};
+
+// GET BOOKMARKED POSTS
+export const getBookmarkedPosts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Find all posts where the user's ID is in the bookmark array
+    const posts = await Post.find({ bookmark: userId })
+      .populate("userId", "name username")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      posts,
     });
   } catch (error) {
     console.error(error);

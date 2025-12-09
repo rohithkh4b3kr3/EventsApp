@@ -10,6 +10,7 @@ import {
   getUserPosts,
   getFollowingPosts,
   sharePost,
+  getBookmarkedPosts,
 } from "../controllers/postController.js";
 import isAuthenticated from "../config/auth.js";
 import multer from "multer";
@@ -33,6 +34,7 @@ router.put("/like/:id", isAuthenticated, likeOrDislike);
 router.put("/comment/:id", isAuthenticated, addComment);
 router.put("/bookmark/:id", isAuthenticated, bookmarkPost);
 router.get("/all", isAuthenticated, getAllPosts);
+router.get("/bookmarked", isAuthenticated, getBookmarkedPosts);
 router.get("/:id", isAuthenticated, getPostById);
 router.get("/user/:userId", isAuthenticated, getUserPosts);
 router.get("/followingpost/:id", isAuthenticated, getFollowingPosts);
