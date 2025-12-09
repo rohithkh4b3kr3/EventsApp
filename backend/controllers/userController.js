@@ -1,6 +1,26 @@
 import User from "../models/UserModel.js";
 import Post from "../models/PostModel.js";
 
+export const getMe = async (req, res) => {
+  try {
+    const loggedInUserId = req.user._id;
+    const user = await User.findById(loggedInUserId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success: false });
+    }
+
+    res.status(200).json({
+      message: "Profile fetched successfully",
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error", success: false });
+  }
+};
+
 // Get Other User Profile
 export const getOtherProfile = async (req, res) => {
   try {
