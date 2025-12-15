@@ -79,7 +79,7 @@ export default function CreatePost({ onPostCreated }) {
             <button
               onClick={submit}
               disabled={loading || !description.trim()}
-              className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-60 hover:scale-105"
+              className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-gray-800 px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-60 hover:scale-105"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

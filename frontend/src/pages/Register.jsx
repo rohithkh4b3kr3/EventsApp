@@ -62,7 +62,7 @@ export default function Register() {
             <input
               required
               type="text"
-              placeholder="Username"
+              placeholder="Redox08"
               className="w-full bg-slate-900/40 border border-slate-700 text-slate-200 p-3.5 rounded-xl mt-1 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-600/30 outline-none transition-all"
               onChange={(e) => setUsername(e.target.value)}
             />
