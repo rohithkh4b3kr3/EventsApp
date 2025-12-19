@@ -24,21 +24,26 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
+});
 
 const router = express.Router();
 
-router.post("/create", isAuthenticated, upload.single("image"), createPost);
+// Support both single and multiple images
+router.post("/create", isAuthenticated, upload.array("images", 10), createPost); // Max 10 images
 router.delete("/delete/:id", isAuthenticated, deletePost);
 router.put("/like/:id", isAuthenticated, likeOrDislike);
 router.put("/comment/:id", isAuthenticated, addComment);
 router.put("/bookmark/:id", isAuthenticated, bookmarkPost);
 router.get("/all", isAuthenticated, getAllPosts);
 router.get("/bookmarked", isAuthenticated, getBookmarkedPosts);
-router.get("/:id", isAuthenticated, getPostById);
-router.get("/user/:userId", isAuthenticated, getUserPosts);
+router.get("/following", isAuthenticated, getFollowingPosts);
 router.get("/followingpost/:id", isAuthenticated, getFollowingPosts);
+router.get("/user/:userId", isAuthenticated, getUserPosts);
 router.post("/sharepost/:id", isAuthenticated, sharePost);
+router.get("/:id", isAuthenticated, getPostById); // Keep this last to avoid conflicts
 
 // router.get("/user/:userId", isAuthenticated, getUserProfile);
 // router.get("/profile/:id",getOtherProfile);

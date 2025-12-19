@@ -10,10 +10,17 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found", success: false });
     }
 
+    // Ensure following and followers arrays are included
+    const userData = {
+      ...user.toObject(),
+      following: user.following || [],
+      followers: user.followers || [],
+    };
+
     res.status(200).json({
       message: "Profile fetched successfully",
       success: true,
-      user,
+      user: userData,
     });
   } catch (error) {
     console.error(error);
@@ -44,6 +51,36 @@ export const getOtherProfile = async (req, res) => {
   }
 };
 
+// Search Users
+export const searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.trim().length === 0) {
+      return res.status(200).json({ success: true, users: [] });
+    }
+
+    const searchTerm = q.trim();
+    const users = await User.find({
+      $or: [
+        { username: { $regex: searchTerm, $options: "i" } },
+        { name: { $regex: searchTerm, $options: "i" } },
+        { clubName: { $regex: searchTerm, $options: "i" } },
+      ],
+    })
+      .select("-password")
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Server Error", success: false });
+  }
+};
+
 // Toggle Follow / Unfollow
 export const toggleFollow = async (req, res) => {
   try {
@@ -61,8 +98,10 @@ export const toggleFollow = async (req, res) => {
       return res.status(404).json({ message: "User not found", success: false });
     }
 
-    // Check if already following
-    const isFollowing = loggedInUser.following.includes(targetUserId);
+    // Check if already following (handle both string and ObjectId comparison)
+    const isFollowing = loggedInUser.following.some(
+      id => id.toString() === targetUserId
+    );
 
     if (isFollowing) {
       // Unfollow

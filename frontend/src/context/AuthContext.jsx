@@ -55,11 +55,23 @@ export default function AuthProvider({ children }) {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const res = await axios.get("/user/me");
+      if (res.data?.user) {
+        persistUser(res.data.user);
+      }
+    } catch {
+      // ignore: likely not logged in
+    }
+  };
+
   const value = useMemo(
     () => ({
       user,
       loading,
       setUser: persistUser,
+      refreshUser,
       login,
       register,
       logout,

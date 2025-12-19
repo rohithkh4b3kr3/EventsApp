@@ -1,32 +1,34 @@
-import { useContext, useEffect, useState } from "react";
 import axios from "../api/axios";
+import { useContext, useEffect, useState } from "react";
 import PostCard from "../components/PostCard";
 import { AuthContext } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 
-export default function Favorites() {
+export default function Following() {
   const { user, loading: authLoading } = useContext(AuthContext);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchBookmarkedPosts = async () => {
+  const fetchFollowingPosts = async () => {
     setLoading(true);
-    setError("");
     try {
-      const res = await axios.get("/post/bookmarked");
+      const res = await axios.get(`/post/following`);
       setPosts(res.data.posts || []);
-    } catch (err) {
-      setError("Failed to load favorites.");
-      console.error(err);
+      if (res.data.posts?.length === 0) {
+        setError("No posts from people you follow yet. Start following users to see their posts here!");
+      }
+    } catch {
+      setError("Could not load posts from following, try again later.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) fetchBookmarkedPosts();
-    else setLoading(false);
+    if (user) {
+      fetchFollowingPosts();
+    }
   }, [user]);
 
   if (authLoading) {
@@ -41,16 +43,16 @@ export default function Favorites() {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center px-6">
         <h1 className="text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-3">
-          Favorites
+          Follow Events
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-xl max-w-xl mb-8">
-          Sign in to save and access your favorite posts.
+          Sign in to see posts from users you follow.
         </p>
         <Link
           to="/login"
           className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-full transition-colors"
         >
-          Sign In
+          Get Started
         </Link>
       </div>
     );
@@ -60,8 +62,8 @@ export default function Favorites() {
     <div className="max-w-[600px] mx-auto border-x border-slate-200 dark:border-slate-800 min-h-full">
       {/* Header */}
       <div className="sticky top-[73px] lg:top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 py-3">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Favorites</h1>
-        <p className="text-[15px] text-slate-500 dark:text-slate-400 mt-1">Your saved posts</p>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Following</h1>
+        <p className="text-[15px] text-slate-500 dark:text-slate-400 mt-1">Posts from people you follow</p>
       </div>
 
       {loading && (
@@ -85,34 +87,38 @@ export default function Favorites() {
       )}
 
       {error && (
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-          <div className="text-red-500 text-sm font-medium mb-3">{error}</div>
-          <button
-            onClick={fetchBookmarkedPosts}
-            className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-colors text-sm"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {!loading && posts.length === 0 && (
-        <div className="p-12 text-center border-b border-slate-200 dark:border-slate-800">
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-2">No favorites yet</p>
-          <p className="text-slate-400 dark:text-slate-500 text-sm mb-6">Bookmark posts to see them here.</p>
-          <Link
-            to="/"
-            className="inline-block px-6 py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-colors text-sm"
-          >
-            Browse Posts
-          </Link>
+        <div className={`p-12 text-center border-b border-slate-200 dark:border-slate-800 ${
+          !error.includes("No posts") && "bg-red-50 dark:bg-red-950/20"
+        }`}>
+          <p className={`text-lg font-medium mb-2 ${
+            error.includes("No posts") 
+              ? "text-slate-500 dark:text-slate-400" 
+              : "text-red-500"
+          }`}>
+            {error.includes("No posts") ? "No Posts Yet" : "Error"}
+          </p>
+          <p className={`text-sm ${
+            error.includes("No posts") 
+              ? "text-slate-400 dark:text-slate-500" 
+              : "text-red-400"
+          }`}>
+            {error}
+          </p>
+          {error.includes("No posts") && (
+            <Link
+              to="/"
+              className="inline-block mt-6 px-6 py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-colors text-sm"
+            >
+              Explore Posts
+            </Link>
+          )}
         </div>
       )}
 
       {!loading && posts.length > 0 && (
         <div>
           {posts.map((post) => (
-            <PostCard key={post._id} post={post} onRefresh={fetchBookmarkedPosts} />
+            <PostCard key={post._id} post={post} onRefresh={fetchFollowingPosts} />
           ))}
         </div>
       )}

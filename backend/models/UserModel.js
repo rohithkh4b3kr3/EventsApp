@@ -6,8 +6,10 @@ const userSchema = new mongoose.Schema({
     email : {type: String, required: true, unique: true},
     password : {type: String, required: true , select: false},
     createdAt : {type: Date, default: Date.now} ,
-    followers : {type : Array , default: []},
-    following : {type : Array , default: []}
+    followers : [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following : [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    userType: { type: String, enum: ['user', 'club'], default: 'user' },
+    clubName: { type: String }, // Only for clubs
 
 } ,{ timestamps: true } );
 

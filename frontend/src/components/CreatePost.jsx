@@ -1,26 +1,63 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo, useState, useEffect } from "react";
 import axios from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 
 export default function CreatePost({ onPostCreated }) {
   const { user } = useContext(AuthContext);
   const [description, setDescription] = useState("");
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const previewUrl = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : ""), [imageFile]);
+  const previewUrls = useMemo(() => {
+    return imageFiles.map(file => URL.createObjectURL(file));
+  }, [imageFiles]);
+
+  // Cleanup preview URLs when component unmounts or imageFiles change
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
 
   const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 10) {
+      setError("Maximum 10 images allowed");
+      return;
     }
+    
+    // Filter valid image files
+    const validFiles = files.filter(file => file.type.startsWith('image/'));
+    if (validFiles.length !== files.length) {
+      setError("Please select only image files");
+      return;
+    }
+
+    setImageFiles(prev => {
+      const combined = [...prev, ...validFiles];
+      if (combined.length > 10) {
+        setError("Maximum 10 images allowed");
+        return prev;
+      }
+      setError("");
+      return combined;
+    });
+  };
+
+  const removeImage = (index) => {
+    setImageFiles(prev => {
+      const newFiles = prev.filter((_, i) => i !== index);
+      // Revoke URL for removed file
+      URL.revokeObjectURL(previewUrls[index]);
+      return newFiles;
+    });
+    setError("");
   };
 
   const submit = async () => {
     if (!description.trim()) {
-      setError("Please add a short description for your event.");
+      setError("Post cannot be empty");
       return;
     }
     setError("");
@@ -28,17 +65,21 @@ export default function CreatePost({ onPostCreated }) {
     try {
       const formData = new FormData();
       formData.append("description", description.trim());
-      if (imageFile) {
-        formData.append("image", imageFile);
-      }
+      
+      // Append all image files
+      imageFiles.forEach((file) => {
+        formData.append("images", file);
+      });
+
       await axios.post("/post/create", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      
       setDescription("");
-      setImageFile(null);
+      setImageFiles([]);
       onPostCreated?.();
     } catch (err) {
-      setError(err.friendlyMessage || "Could not post right now.");
+      setError(err.response?.data?.msg || "Could not post right now.");
     } finally {
       setLoading(false);
     }
@@ -47,68 +88,94 @@ export default function CreatePost({ onPostCreated }) {
   if (!user) return null;
 
   return (
-    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-6 shadow-lg rounded-2xl border border-slate-200/50 dark:border-slate-700/50 mb-6 hover-lift relative overflow-hidden">
-      {/* Gradient accent */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600"></div>
-      
-      <div className="flex gap-4">
-        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center font-bold uppercase text-white shadow-md flex-shrink-0">
+    <div className="px-4 py-3">
+      <div className="flex gap-3">
+        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-sm flex-shrink-0">
           {user.name?.[0] || user.username?.[0] || "U"}
         </div>
         <div className="flex-1">
           <textarea
-            className="w-full border-2 border-slate-200 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 transition-all duration-200 rounded-xl p-4 outline-none min-h-[120px] resize-none text-[15px] font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
-            placeholder="What's happening? Share event details…"
+            className="w-full bg-transparent text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none resize-none text-[20px] leading-6 min-h-[120px]"
+            placeholder="What's happening?"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 cursor-pointer group">
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              <span className="px-4 py-2.5 rounded-xl border-2 border-emerald-200 dark:border-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800/40 dark:hover:to-emerald-700/40 transition-all duration-200 shadow-sm hover:shadow-md group-hover:scale-105">
-                Attach image
-              </span>
-              {imageFile && (
-                <span className="text-slate-600 truncate max-w-[200px] font-medium text-sm">
-                  {imageFile.name}
-                </span>
+          {previewUrls.length > 0 && (
+            <div className="mb-3">
+              <div className={`grid gap-2 ${
+                previewUrls.length === 1 ? 'grid-cols-1' :
+                previewUrls.length === 2 ? 'grid-cols-2' :
+                previewUrls.length === 3 ? 'grid-cols-2' :
+                previewUrls.length === 4 ? 'grid-cols-2' :
+                'grid-cols-3'
+              } rounded-2xl overflow-hidden`}>
+                {previewUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className={`w-full object-cover ${
+                        previewUrls.length === 1 ? 'h-[400px]' :
+                        previewUrls.length === 2 ? 'h-[300px]' :
+                        'h-[200px]'
+                      } border border-slate-200 dark:border-slate-800`}
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {previewUrls.length < 10 && (
+                <label className="inline-block mt-2 cursor-pointer">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    multiple 
+                    className="hidden" 
+                    onChange={handleImageChange} 
+                  />
+                  <span className="text-sm text-emerald-500 hover:text-emerald-600 font-medium">
+                    Add more images
+                  </span>
+                </label>
               )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 mt-3">
+            <label className="cursor-pointer">
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple 
+                className="hidden" 
+                onChange={handleImageChange} 
+              />
+              <div className="p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-950/20 transition-colors group">
+                <svg className="w-5 h-5 text-emerald-500 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
             </label>
 
             <button
               onClick={submit}
               disabled={loading || !description.trim()}
-              className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-gray-800 px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-60 hover:scale-105"
+              className="px-4 h-9 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full transition-colors text-[15px]"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Posting...
-                </span>
-              ) : (
-                "Post Event"
-              )}
+              {loading ? "Posting..." : "Post"}
             </button>
           </div>
 
-          {previewUrl && (
-            <div className="mt-4 rounded-xl overflow-hidden border-2 border-slate-200 shadow-md">
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="w-full max-h-80 object-cover"
-              />
-            </div>
-          )}
-
           {error && (
-            <div className="mt-3 bg-rose-50 dark:bg-rose-900/30 border-2 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-4 py-2.5 rounded-xl text-sm font-medium">
-              {error}
-            </div>
+            <div className="mt-3 text-red-500 text-sm font-medium">{error}</div>
           )}
         </div>
       </div>

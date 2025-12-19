@@ -7,10 +7,15 @@ dotenv.config();
 // REGISTER
 export const Register = async (req, res) => {
   try {
-    const { email, password, name, username } = req.body;
+    const { email, password, name, username, userType, clubName } = req.body;
 
     if (!email || !password || !name || !username) {
       return res.status(400).json({ message: "Please fill all fields" });
+    }
+
+    // If registering as club, require clubName
+    if (userType === 'club' && !clubName) {
+      return res.status(400).json({ message: "Club name is required for club registration" });
     }
 
     const existingUser = await User.findOne({ email });
@@ -18,12 +23,32 @@ export const Register = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(400).json({ message: "Username already taken" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({ name, username, email, password: hashedPassword });
+    const userData = {
+      name: userType === 'club' ? clubName : name,
+      username,
+      email,
+      password: hashedPassword,
+      userType: userType || 'user',
+    };
+
+    if (userType === 'club') {
+      userData.clubName = clubName;
+    }
+
+    await User.create(userData);
     return res.status(201).json({ message: "Account registered successfully" });
   } catch (error) {
     console.error("Error in registering user:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Email or username already exists" });
+    }
     return res.status(500).json({ message: "Error in registering user" });
   }
 };
@@ -51,6 +76,18 @@ export const Login = async (req, res) => {
       expiresIn: "1d",
     });
 
+    const userData = {
+      id: existingUser._id,
+      _id: existingUser._id,
+      name: existingUser.name,
+      email: existingUser.email,
+      username: existingUser.username,
+      userType: existingUser.userType || 'user',
+      clubName: existingUser.clubName,
+      followers: existingUser.followers || [],
+      following: existingUser.following || [],
+    };
+
     res
       .status(200)
       .cookie("token", token, {
@@ -61,12 +98,7 @@ export const Login = async (req, res) => {
       })
       .json({
         message: "Login successful",
-        user: {
-          id: existingUser._id,
-          name: existingUser.name,
-          email: existingUser.email,
-          username: existingUser.username,
-        },
+        user: userData,
         token,
       });
   } catch (error) {

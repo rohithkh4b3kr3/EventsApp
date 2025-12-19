@@ -11,13 +11,25 @@ export const createPost = async (req, res) => {
       return res.status(400).json({ msg: "Please provide a description", success: false });
     }
 
-    const imagePath = req.file
-      ? `/uploads/${req.file.filename}`
-      : picturePath || "";
+    // Handle multiple images (from req.files array) or single image (from req.file)
+    let imagePaths = [];
+    if (req.files && req.files.length > 0) {
+      // Multiple images
+      imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+    } else if (req.file) {
+      // Single image (backward compatibility)
+      imagePaths = [`/uploads/${req.file.filename}`];
+    } else if (picturePath) {
+      imagePaths = [picturePath];
+    }
+
+    // For backward compatibility, set image to first image if exists
+    const imagePath = imagePaths.length > 0 ? imagePaths[0] : "";
 
     const newPost = await Post.create({
       description,
-      image: imagePath,
+      image: imagePath, // For backward compatibility
+      images: imagePaths, // New array field
       userId,
     });
 
