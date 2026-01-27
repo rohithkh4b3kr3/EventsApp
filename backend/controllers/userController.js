@@ -28,6 +28,37 @@ export const getMe = async (req, res) => {
   }
 };
 
+export const updateProfilePhoto = async (req, res) => {
+  try {
+    const loggedInUserId = req.user._id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Profile photo is required", success: false });
+    }
+
+    const profilePhoto = `/uploads/${req.file.filename}`;
+
+    const user = await User.findByIdAndUpdate(
+      loggedInUserId,
+      { profilePhoto },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success: false });
+    }
+
+    res.status(200).json({
+      message: "Profile photo updated successfully",
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error", success: false });
+  }
+};
+
 // Get Other User Profile
 export const getOtherProfile = async (req, res) => {
   try {

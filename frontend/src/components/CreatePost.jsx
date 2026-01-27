@@ -1,13 +1,23 @@
 import { useContext, useMemo, useState, useEffect } from "react";
 import axios from "../api/axios";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 
 export default function CreatePost({ onPostCreated }) {
   const { user } = useContext(AuthContext);
   const [description, setDescription] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventTime, setEventTime] = useState("");
+  const [venue, setVenue] = useState("");
   const [imageFiles, setImageFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const getAvatarUrl = (photoPath) => {
+    if (!photoPath) return "";
+    if (photoPath.startsWith("http")) return photoPath;
+    const base = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api$/, "");
+    return `${base}${photoPath}`;
+  };
 
   const previewUrls = useMemo(() => {
     return imageFiles.map(file => URL.createObjectURL(file));
@@ -60,11 +70,20 @@ export default function CreatePost({ onPostCreated }) {
       setError("Post cannot be empty");
       return;
     }
+
+    if (!eventDate || !eventTime || !venue.trim()) {
+      setError("Please provide date, time, and venue");
+      return;
+    }
+
     setError("");
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append("description", description.trim());
+      formData.append("eventDate", eventDate);
+      formData.append("eventTime", eventTime);
+      formData.append("venue", venue.trim());
       
       // Append all image files
       imageFiles.forEach((file) => {
@@ -76,24 +95,77 @@ export default function CreatePost({ onPostCreated }) {
       });
       
       setDescription("");
+      setEventDate("");
+      setEventTime("");
+      setVenue("");
       setImageFiles([]);
       onPostCreated?.();
     } catch (err) {
-      setError(err.response?.data?.msg || "Could not post right now.");
+      const status = err?.response?.status;
+      if (status === 403) {
+        setError("Only clubs can post events");
+      } else {
+        setError(err.response?.data?.msg || err?.friendlyMessage || "Could not post right now.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  if (!user) return null;
+  if (!user || user.userType !== "club") return null;
 
   return (
     <div className="px-4 py-3">
       <div className="flex gap-3">
-        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-sm flex-shrink-0">
-          {user.name?.[0] || user.username?.[0] || "U"}
-        </div>
+        {user?.profilePhoto ? (
+          <img
+            src={getAvatarUrl(user.profilePhoto)}
+            alt="Profile"
+            className="h-12 w-12 rounded-full object-cover border border-slate-200 dark:border-slate-800 flex-shrink-0"
+          />
+        ) : (
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-sm flex-shrink-0">
+            {user.name?.[0] || user.username?.[0] || "U"}
+          </div>
+        )}
         <div className="flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Date
+              </label>
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Venue
+              </label>
+              <input
+                type="text"
+                value={venue}
+                onChange={(e) => setVenue(e.target.value)}
+                placeholder="e.g. OAT"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
           <textarea
             className="w-full bg-transparent text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none resize-none text-[20px] leading-6 min-h-[120px]"
             placeholder="What's happening?"
@@ -167,7 +239,7 @@ export default function CreatePost({ onPostCreated }) {
 
             <button
               onClick={submit}
-              disabled={loading || !description.trim()}
+              disabled={loading || !description.trim() || !eventDate || !eventTime || !venue.trim()}
               className="px-4 h-9 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full transition-colors text-[15px]"
             >
               {loading ? "Posting..." : "Post"}

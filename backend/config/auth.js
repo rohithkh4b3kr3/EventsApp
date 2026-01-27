@@ -10,8 +10,11 @@ const isAuthenticated = async (req , res , next) =>{
             return res.status(401).json({message : "Login Required" , success : false});
         }
         const decoded = jwt.verify(token , process.env.JWT_SECRET);
-        // req.user = decoded.id;
-        req.user = { _id: decoded.id };
+        const user = await User.findById(decoded.id).select("-password");
+        if (!user) {
+            return res.status(401).json({message : "Login Required" , success : false});
+        }
+        req.user = user;
         next();
      }
     catch(error){

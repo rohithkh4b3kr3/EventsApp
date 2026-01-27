@@ -1,0 +1,543 @@
+class VoiceModule(reactContext: ReactApplicationContext)
+  : ReactContextBaseJavaModule(reactContext) {
+
+  override fun getName() = "VoiceModule"
+
+  @ReactMethod
+  fun startListening(promise: Promise) {
+    val recognizer = SpeechRecognizer.createSpeechRecognizer(reactApplicationContext)
+
+    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+      RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+
+    recognizer.setRecognitionListener(object : RecognitionListener {
+      override fun onResults(results: Bundle) {
+        val text = results.getStringArrayList(
+          SpeechRecognizer.RESULTS_RECOGNITION
+        )?.get(0)
+        promise.resolve(text)
+      }
+
+      override fun onError(error: Int) {
+        promise.reject("VOICE_ERROR", "Speech failed")
+      }
+
+      override fun onReadyForSpeech(params: Bundle?) {}
+      override fun onBeginningOfSpeech() {}
+      override fun onRmsChanged(rmsdB: Float) {}
+      override fun onBufferReceived(buffer: ByteArray?) {}
+      override fun onEndOfSpeech() {}
+      override fun onPartialResults(partialResults: Bundle?) {}
+      override fun onEvent(eventType: Int, params: Bundle?) {}
+    })
+
+    recognizer.startListening(intent)
+  }
+}
+  ,,,,,,,,,
+
+import Speech
+import AVFoundation
+
+@objc(VoiceModule)
+class VoiceModule: NSObject {
+
+  let audioEngine = AVAudioEngine()
+  let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+  var request: SFSpeechAudioBufferRecognitionRequest?
+  var task: SFSpeechRecognitionTask?
+
+  @objc
+  func startListening(_ resolve: @escaping RCTPromiseResolveBlock,
+                      rejecter reject: RCTPromiseRejectBlock) {
+
+    SFSpeechRecognizer.requestAuthorization { status in
+      if status != .authorized {
+        reject("NO_PERMISSION", "Speech permission denied", nil)
+        return
+      }
+
+      self.request = SFSpeechAudioBufferRecognitionRequest()
+      let inputNode = self.audioEngine.inputNode
+
+      self.task = self.recognizer?.recognitionTask(with: self.request!) { result, error in
+        if let result = result, result.isFinal {
+          resolve(result.bestTranscription.formattedString)
+          self.audioEngine.stop()
+          inputNode.removeTap(onBus: 0)
+        }
+      }
+
+      let format = inputNode.outputFormat(forBus: 0)
+      inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) {
+        (buffer, _) in
+        self.request?.append(buffer)
+      }
+
+      self.audioEngine.prepare()
+      try? self.audioEngine.start()
+    }
+  }
+}
+,,,,,,,,,,
+
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { NavigationContainer } from "@react-navigation/native";
+
+import ChatScreen from "../screens/ChatScreen";
+import TodayScreen from "../screens/TodayScreen";
+import TimelineScreen from "../screens/TimelineScreen";
+
+const Tab = createBottomTabNavigator();
+
+const AppNavigator = () => {
+    return (
+        <NavigationContainer>
+            <Tab.Navigator screenOptions={{ headerShown: false}}>
+                <Tab.Screen name="Chat" component={ChatScreen} />
+                <Tab.Screen name="Today" component={TodayScreen} />
+                <Tab.Screen name="Timeline" component={TimelineScreen} />
+            </Tab.Navigator>
+        </NavigationContainer>
+    )
+}
+
+export default AppNavigator; ,,,,,,,,,,,,
+
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { startSpeechToText } from "../services/voice";
+
+const ChatScreen = () => {
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim()) {
+      Alert.alert("Say something", "What’s on your mind today?");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/ai/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input }),
+      });
+
+      const data = await res.json();
+
+      Alert.alert(
+        "I’ve organized this for you",
+        `${data.tasks.length} things sorted`
+      );
+
+      setInput("");
+    } catch {
+      Alert.alert("Error", "Could not organize this right now");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVoice = async () => {
+    try {
+      setListening(true);
+      const text = await startSpeechToText();
+      setInput(text);
+    } catch {
+      Alert.alert("Voice error", "Could not hear clearly");
+    } finally {
+      setListening(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.wrapper}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={styles.container}>
+        <Text style={styles.heading}>LifeOS</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="What’s on your mind today?"
+          placeholderTextColor="#999"
+          multiline
+          value={input}
+          onChangeText={setInput}
+        />
+
+        <TouchableOpacity
+          style={styles.voiceButton}
+          onPress={handleVoice}
+        >
+          <Text style={styles.voiceText}>
+            {listening ? "Listening…" : "Speak"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={handleSend}
+          disabled={loading}
+        >
+          <Text style={styles.sendText}>
+            {loading ? "Organizing…" : "Organize my life"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+};
+
+const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+  },
+  heading: {
+    fontSize: 32,
+    fontWeight: "600",
+    marginBottom: 24,
+    color: "#111",
+  },
+  input: {
+    fontSize: 18,
+    lineHeight: 26,
+    minHeight: 160,
+    borderColor: "#ddd",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    color: "#111",
+  },
+  voiceButton: {
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  voiceText: {
+    fontSize: 16,
+    color: "#555",
+  },
+  sendButton: {
+    backgroundColor: "#111",
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  sendText: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+    fontWeight: "500",
+  },
+});
+
+export default ChatScreen;
+,,,,,,,,,,,,,,,
+
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+
+const TimelineScreen = () => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/api/tasks/upcoming")
+      .then(res => res.json())
+      .then(data => {
+        setTasks(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Upcoming</Text>
+
+      <FlatList
+        data={tasks}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => (
+          <View style={styles.task}>
+            <Text style={styles.text}>{item.title}</Text>
+            {item.dueAt && (
+              <Text style={styles.date}>
+                {new Date(item.dueAt).toLocaleString()}
+              </Text>
+            )}
+          </View>
+        )}
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  title: { fontSize: 28, fontWeight: "600", marginBottom: 16 },
+  task: {
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: "#f7f7f7",
+    marginBottom: 10,
+  },
+  text: { fontSize: 16 },
+  date: { fontSize: 13, color: "#666", marginTop: 4 },
+});
+
+export default TimelineScreen;
+,,,,,,,,,,,
+
+import React, { useEffect, useState , Fragment } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+
+type Task = {
+  _id: string;
+  title: string;
+  priority: "High" | "Medium" | "Low";
+};
+
+const TodayScreen = () => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTodayTasks = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/tasks/today");
+      const data: Task[] = await res.json();
+      setTasks(data);
+    } catch (err) {
+      console.error("Failed to fetch today tasks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTodayTasks();
+  }, []);
+
+  const completeTask = async (id) => {
+    await fetch(`http://localhost:5000/api/tasks/${id}/complete`, {
+      method: "PATCH",
+    });
+    fetchTodayTasks();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  const renderGroup = (priority,color) => {
+    const group = tasks.filter(
+      (task: Task) => task.priority === priority
+    );
+
+    if (!group.length) return null;
+
+    return (
+      <View>
+        <Text style={styles.group}>{priority}</Text>
+
+        {group.map((task: Task) => (
+  <Fragment key={task._id}>
+    <TouchableOpacity
+      style={[styles.task, { borderLeftColor: color }]}
+      onPress={() => completeTask(task._id)}
+    >
+      <Text style={styles.taskText}>{task.title}</Text>
+    </TouchableOpacity>
+  </Fragment>
+))}
+
+
+
+
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Today</Text>
+      {renderGroup("High", "#e53935")}
+      {renderGroup("Medium", "#fbc02d")}
+      {renderGroup("Low", "#43a047")}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#fff",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+  group: {
+    marginTop: 20,
+    fontSize: 14,
+    color: "#777",
+  },
+  task: {
+    padding: 14,
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: "#f7f7f7",
+    borderLeftWidth: 4,
+  },
+  taskText: {
+    fontSize: 16,
+  },
+});
+
+export default TodayScreen;
+ ,,,,,,,,,,,,,,,
+
+const BASE_URL = "http://localhost:5000";
+
+export async function apiFetch(
+  path: string,
+  options: RequestInit = {}
+) {
+
+  return fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer DEV_TOKEN", // temp
+      ...(options.headers || {}),
+    },
+  });
+}
+
+
+
+,,,,,,,,,,,,
+
+import Voice from "@react-native-voice/voice";
+
+export async function startSpeechToText() {
+  return new Promise((resolve, reject) => {
+    let finalText = "";
+
+    Voice.onSpeechResults = (e) => {
+      finalText = e.value?.[0] || "";
+    };
+
+    Voice.onSpeechEnd = async () => {
+      await Voice.stop();
+      resolve(finalText);
+    };
+
+    Voice.onSpeechError = (e) => {
+      reject(e.error);
+    };
+
+    Voice.start("en-US");
+  });
+}
+
+,,,,,,,,,,
+
+import { NativeModules } from "react-native";
+
+export async function startSpeechToText() {
+  return await NativeModules.VoiceModule.startListening();
+}
+
+
+,,,,,,,,,,,,
+
+declare module "@react-navigation/native";
+declare module "@react-navigation/bottom-tabs";
+declare module "expo-notifications";
+declare module "expo-device";
+
+,,,,,,,,,,,
+
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+
+export default function App() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>lifeOS (PC Debug Mode)</Text>
+      <Text style={styles.subtitle}>
+        App is running successfully on PC ✅
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "600",
+  },
+  subtitle: {
+    fontSize: 16,
+    marginTop: 12,
+    color: "#666",
+  },
+});
+ ,,,,,,,,,
+
+
+

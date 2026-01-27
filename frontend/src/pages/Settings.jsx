@@ -1,11 +1,14 @@
 import { useContext, useState } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { useNavigate, Link } from "react-router-dom";
+import axios from "../api/axios";
 
 export default function Settings() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, refreshUser, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -28,6 +31,37 @@ export default function Settings() {
     }
   };
 
+  const getAvatarUrl = (photoPath) => {
+    if (!photoPath) return "";
+    if (photoPath.startsWith("http")) return photoPath;
+    const base = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api$/, "");
+    return `${base}${photoPath}`;
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError("");
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await axios.post("/user/profile-photo", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data?.user) {
+        setUser(res.data.user);
+      } else {
+        await refreshUser();
+      }
+    } catch (err) {
+      setPhotoError(err?.response?.data?.message || err?.friendlyMessage || "Could not upload photo");
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="max-w-[600px] mx-auto border-x border-slate-200 dark:border-slate-800 min-h-full">
       {/* Header */}
@@ -42,12 +76,37 @@ export default function Settings() {
           <div className="bg-white dark:bg-black border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-sm">
-                  {user?.name?.[0] || user?.username?.[0] || "U"}
-                </div>
+                {user?.profilePhoto ? (
+                  <img
+                    src={getAvatarUrl(user.profilePhoto)}
+                    alt="Profile"
+                    className="h-12 w-12 rounded-full object-cover border border-slate-200 dark:border-slate-800"
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-sm">
+                    {user?.name?.[0] || user?.username?.[0] || "U"}
+                  </div>
+                )}
                 <div>
                   <p className="font-bold text-[15px] text-slate-900 dark:text-white">{user?.name}</p>
                   <p className="text-[15px] text-slate-500 dark:text-slate-400">@{user?.username}</p>
+                  <div className="mt-2">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePhotoChange}
+                        disabled={photoUploading}
+                      />
+                      <span className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
+                        {photoUploading ? "Uploading..." : "Change photo"}
+                      </span>
+                    </label>
+                  </div>
+                  {photoError && (
+                    <div className="mt-2 text-sm font-medium text-red-500">{photoError}</div>
+                  )}
                 </div>
               </div>
               <Link

@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Register() {
@@ -53,7 +53,7 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">Create your account</h1>
-          <p className="text-slate-600 dark:text-slate-400 text-[15px]">Join Events Hub today</p>
+          {/* <p className="text-slate-600 dark:text-slate-400 text-[15px]">Join InstiEvents today</p> */}
         </div>
 
         <div className="bg-white dark:bg-black border border-slate-200 dark:border-slate-800 rounded-2xl p-8">

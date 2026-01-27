@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
     following : [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     userType: { type: String, enum: ['user', 'club'], default: 'user' },
     clubName: { type: String }, // Only for clubs
+    profilePhoto: { type: String },
+    joinedClubChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
 } ,{ timestamps: true } );
 

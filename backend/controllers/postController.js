@@ -4,11 +4,24 @@ import User from "../models/UserModel.js";
 // CREATE POST
 export const createPost = async (req, res) => {
   try {
-    const { description, picturePath } = req.body;
+    const { description, picturePath, eventDate, eventTime, venue } = req.body;
     const userId = req.user._id; // logged-in user
+
+    if (req.user?.userType !== "club") {
+      return res.status(403).json({ msg: "Only clubs can post events", success: false });
+    }
 
     if (!description) {
       return res.status(400).json({ msg: "Please provide a description", success: false });
+    }
+
+    if (!eventDate || !eventTime || !venue) {
+      return res.status(400).json({ msg: "Please provide date, time, and venue", success: false });
+    }
+
+    const parsedEventDate = new Date(eventDate);
+    if (Number.isNaN(parsedEventDate.getTime())) {
+      return res.status(400).json({ msg: "Invalid event date", success: false });
     }
 
     // Handle multiple images (from req.files array) or single image (from req.file)
@@ -28,6 +41,9 @@ export const createPost = async (req, res) => {
 
     const newPost = await Post.create({
       description,
+      eventDate: parsedEventDate,
+      eventTime,
+      venue,
       image: imagePath, // For backward compatibility
       images: imagePaths, // New array field
       userId,
@@ -149,7 +165,7 @@ export const getAllPosts = async (req, res) => {
   try {
     // Fetch all posts from all users (for events discovery)
     const posts = await Post.find({})
-      .populate("userId", "name username")
+      .populate("userId", "name username userType clubName profilePhoto")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, posts });
@@ -163,7 +179,7 @@ export const getAllPosts = async (req, res) => {
 export const getPostById = async (req, res) => {
   try {
     const postId = req.params.id;
-    const post = await Post.findById(postId).populate("userId", "name username");
+    const post = await Post.findById(postId).populate("userId", "name username userType clubName profilePhoto");
     if (!post) return res.status(404).json({ msg: "Post not found", success: false });
 
     res.status(200).json({ success: true, post });
@@ -177,7 +193,7 @@ export const getPostById = async (req, res) => {
 export const getUserPosts = async (req, res) => {
   try {
     const userId = req.params.userId; // logged-in user
-    const posts = await Post.find({ userId }).populate("userId", "name username").sort({ createdAt: -1 });
+    const posts = await Post.find({ userId }).populate("userId", "name username userType clubName profilePhoto").sort({ createdAt: -1 });
     res.status(200).json({ success: true, posts });
   } catch (error) {
     console.error(error);
@@ -197,7 +213,7 @@ export const getFollowingPosts = async (req, res) => {
 
     const followingUserPosts = await Promise.all(
       loggedInUser.following.map((otherUserId) => {
-        return Post.find({ userId: otherUserId }).populate("userId", "name username").sort({ createdAt: -1 });
+        return Post.find({ userId: otherUserId }).populate("userId", "name username userType clubName profilePhoto").sort({ createdAt: -1 });
       })
     );
 
@@ -221,13 +237,30 @@ export const getBookmarkedPosts = async (req, res) => {
 
     // Find all posts where the user's ID is in the bookmark array
     const posts = await Post.find({ bookmark: userId })
-      .populate("userId", "name username")
+      .populate("userId", "name username userType clubName profilePhoto")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       posts,
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Server Error", success: false });
+  }
+};
+
+// GET ALL CLUB EVENTS (for calendar)
+export const getClubEvents = async (req, res) => {
+  try {
+    const clubUsers = await User.find({ userType: "club" }).select("_id");
+    const clubIds = clubUsers.map((u) => u._id);
+
+    const posts = await Post.find({ userId: { $in: clubIds } })
+      .populate("userId", "name username userType clubName profilePhoto")
+      .sort({ eventDate: 1, eventTime: 1, createdAt: -1 });
+
+    res.status(200).json({ success: true, posts });
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: "Server Error", success: false });

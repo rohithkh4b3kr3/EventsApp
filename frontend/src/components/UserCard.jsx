@@ -1,6 +1,6 @@
 import { useContext, useState, useEffect } from "react";
 import axios from "../api/axios";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { Link } from "react-router-dom";
 
 export default function UserCard({ user, isCurrentUser, onRefresh }) {

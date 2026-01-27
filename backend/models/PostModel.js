@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 
 const postSchema = new mongoose.Schema({
     description: { type: String, required: true },
+    eventDate: { type: Date },
+    eventTime: { type: String },
+    venue: { type: String },
     image: { type: String }, // Keep for backward compatibility
     images: [{ type: String }], // Array for multiple images
     like: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

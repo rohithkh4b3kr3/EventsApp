@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import axios from "../api/axios";
 import PostCard from "../components/PostCard";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { Link } from "react-router-dom";
 
 export default function Favorites() {

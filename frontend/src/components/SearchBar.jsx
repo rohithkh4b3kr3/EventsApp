@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext, useRef } from "react";
 import axios from "../api/axios";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { Link } from "react-router-dom";
 
 export default function SearchBar() {
@@ -8,7 +8,7 @@ export default function SearchBar() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const { user } = useContext(AuthContext);
+  useContext(AuthContext);
   const searchRef = useRef(null);
   const resultsRef = useRef(null);
 

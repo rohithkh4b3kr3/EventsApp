@@ -1,8 +1,7 @@
 // src/context/AuthContext.jsx
-import { createContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "../api/axios";
-
-export const AuthContext = createContext(null);
+import { AuthContext } from "./AuthContextContext";
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -10,6 +9,15 @@ export default function AuthProvider({ children }) {
     return cached ? JSON.parse(cached) : null;
   });
   const [loading, setLoading] = useState(true);
+
+  const persistUser = useCallback((nextUser) => {
+    setUser(nextUser);
+    if (nextUser) {
+      localStorage.setItem("auth_user", JSON.stringify(nextUser));
+    } else {
+      localStorage.removeItem("auth_user");
+    }
+  }, []);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -25,37 +33,44 @@ export default function AuthProvider({ children }) {
       }
     };
     bootstrap();
-  }, []);
+  }, [persistUser]);
 
-  const persistUser = (nextUser) => {
-    setUser(nextUser);
-    if (nextUser) {
-      localStorage.setItem("auth_user", JSON.stringify(nextUser));
-    } else {
-      localStorage.removeItem("auth_user");
-    }
-  };
-
-  const login = async (payload) => {
+  const login = useCallback(async (payload) => {
     const res = await axios.post("/user/login", payload);
     persistUser(res.data.user);
     return res.data;
-  };
+  }, [persistUser]);
 
-  const register = async (payload) => {
+  const googleLogin = useCallback(async (payload) => {
+    const res = await axios.post("/user/google-login", payload);
+    if (res.data?.user) {
+      persistUser(res.data.user);
+    }
+    return res.data;
+  }, [persistUser]);
+
+  const completeClubProfile = useCallback(async (payload) => {
+    const res = await axios.post("/user/complete-club-profile", payload);
+    if (res.data?.user) {
+      persistUser(res.data.user);
+    }
+    return res.data;
+  }, [persistUser]);
+
+  const register = useCallback(async (payload) => {
     const res = await axios.post("/user/register", payload);
     return res.data;
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await axios.get("/user/logout");
     } finally {
       persistUser(null);
     }
-  };
+  }, [persistUser]);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const res = await axios.get("/user/me");
       if (res.data?.user) {
@@ -64,7 +79,7 @@ export default function AuthProvider({ children }) {
     } catch {
       // ignore: likely not logged in
     }
-  };
+  }, [persistUser]);
 
   const value = useMemo(
     () => ({
@@ -73,10 +88,22 @@ export default function AuthProvider({ children }) {
       setUser: persistUser,
       refreshUser,
       login,
+      googleLogin,
+      completeClubProfile,
       register,
       logout,
     }),
-    [user, loading]
+    [
+      user,
+      loading,
+      persistUser,
+      refreshUser,
+      login,
+      googleLogin,
+      completeClubProfile,
+      register,
+      logout,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

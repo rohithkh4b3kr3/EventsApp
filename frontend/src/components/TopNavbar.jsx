@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import SearchBar from "./SearchBar";
 
 export default function TopNavbar() {
@@ -26,7 +26,7 @@ export default function TopNavbar() {
         <div className="px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <p className="text-lg font-bold text-slate-900 dark:text-white">
-              Events Hub
+              InstiEvents
             </p>
           </Link>
 
@@ -47,16 +47,29 @@ export default function TopNavbar() {
 
         {menuOpen && (
           <div className="absolute top-full left-0 right-0 mx-4 mt-2 p-2 bg-white dark:bg-black border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-[70]">
-            <Link 
-              to="/" 
-              onClick={() => setMenuOpen(false)} 
-              className="block px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-[15px] font-medium"
-            >
-              Home
-            </Link>
-
             {user ? (
               <>
+                <Link 
+                  to="/chats" 
+                  onClick={() => setMenuOpen(false)} 
+                  className="block px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-[15px] font-medium"
+                >
+                  Chats
+                </Link>
+                <Link 
+                  to="/" 
+                  onClick={() => setMenuOpen(false)} 
+                  className="block px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-[15px] font-medium"
+                >
+                  Home
+                </Link>
+                <Link 
+                  to="/calendar" 
+                  onClick={() => setMenuOpen(false)} 
+                  className="block px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-[15px] font-medium"
+                >
+                  Calendar
+                </Link>
                 <Link 
                   to="/following" 
                   onClick={() => setMenuOpen(false)} 

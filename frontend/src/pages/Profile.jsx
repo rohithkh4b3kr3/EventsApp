@@ -1,7 +1,7 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import axios from "../api/axios";
 import PostCard from "../components/PostCard";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
 export default function Profile() {
@@ -15,20 +15,28 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
-  const fetchProfile = async () => {
+  const getAvatarUrl = (photoPath) => {
+    if (!photoPath) return "";
+    if (photoPath.startsWith("http")) return photoPath;
+    const base = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api$/, "");
+    return `${base}${photoPath}`;
+  };
+
+  const fetchProfile = useCallback(async () => {
     if (!profileId) return;
     setLoading(true);
     try {
       const res = await axios.get(`/user/profile/${profileId}`);
       setUser(res.data.user);
       setPosts(res.data.posts || []);
-    } catch (err) {
+    } catch {
       setError("Could not load profile");
     } finally {
       setLoading(false);
     }
-  };
+  }, [profileId]);
 
   useEffect(() => {
     if (loggedInUser?.following && user?._id) {
@@ -56,10 +64,27 @@ export default function Profile() {
     }
   };
 
+  const handleOpenClubChat = async () => {
+    if (!user || !loggedInUser) return;
+    if (user.userType !== "club") return;
+    if (loggedInUser._id === user._id) return;
+
+    setChatLoading(true);
+    try {
+      await axios.post(`/chat/club/${user._id}/join`);
+      navigate(`/chats/${user._id}`);
+    } catch (err) {
+      console.error("Join chat error:", err);
+      navigate(`/chats/${user._id}`);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!profileId && !loggedInUser) navigate("/login");
     else fetchProfile();
-  }, [profileId]);
+  }, [fetchProfile, loggedInUser, navigate, profileId]);
 
   return (
     <div className="max-w-[600px] mx-auto border-x border-slate-200 dark:border-slate-800 min-h-full">
@@ -81,9 +106,17 @@ export default function Profile() {
           {/* Header */}
           <div className="h-48 bg-slate-200 dark:bg-slate-900 relative">
             <div className="absolute -bottom-16 left-4">
-              <div className="h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-3xl text-white font-bold uppercase border-4 border-white dark:border-black">
-                {user.name?.[0] || "U"}
-              </div>
+              {user?.profilePhoto ? (
+                <img
+                  src={getAvatarUrl(user.profilePhoto)}
+                  alt="Profile"
+                  className="h-32 w-32 rounded-full object-cover border-4 border-white dark:border-black"
+                />
+              ) : (
+                <div className="h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-3xl text-white font-bold uppercase border-4 border-white dark:border-black">
+                  {user.name?.[0] || "U"}
+                </div>
+              )}
             </div>
           </div>
 
@@ -98,17 +131,28 @@ export default function Profile() {
                   Favorites
                 </Link>
               ) : loggedInUser ? (
-                <button
-                  onClick={handleFollowToggle}
-                  disabled={followLoading}
-                  className={`px-4 h-9 rounded-full font-bold transition-all text-[15px] ${
-                    isFollowing
-                      ? "border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white hover:border-red-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
-                      : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200"
-                  } disabled:opacity-50`}
-                >
-                  {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
-                </button>
+                <div className="flex gap-2">
+                  {user.userType === "club" && (
+                    <button
+                      onClick={handleOpenClubChat}
+                      disabled={chatLoading}
+                      className="px-4 h-9 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-[15px] flex items-center disabled:opacity-50"
+                    >
+                      {chatLoading ? "..." : "Chat"}
+                    </button>
+                  )}
+                  <button
+                    onClick={handleFollowToggle}
+                    disabled={followLoading}
+                    className={`px-4 h-9 rounded-full font-bold transition-all text-[15px] ${
+                      isFollowing
+                        ? "border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white hover:border-red-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+                        : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200"
+                    } disabled:opacity-50`}
+                  >
+                    {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
+                  </button>
+                </div>
               ) : null}
             </div>
 

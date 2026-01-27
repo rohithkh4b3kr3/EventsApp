@@ -1,6 +1,6 @@
 import { useContext, useState, useEffect } from "react";
 import axios from "../api/axios";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import { Link } from "react-router-dom";
 
 export default function PostCard({ post, onRefresh }) {
@@ -9,28 +9,23 @@ export default function PostCard({ post, onRefresh }) {
   const [followLoading, setFollowLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
-  
-  if (!post || !post._id) {
-    return null; // Don't render if post is invalid
-  }
-  
-  const author = post.userId || {};
-  
+
+  const author = post?.userId || {};
+
   // Get images array
-  const images = (post.images && Array.isArray(post.images) && post.images.length > 0) 
+  const images = (post?.images && Array.isArray(post.images) && post.images.length > 0)
     ? post.images.filter(img => img)
-    : (post.image ? [post.image] : []);
+    : (post?.image ? [post.image] : []);
   
   // Reset index when post changes
   useEffect(() => {
     setCurrentImageIndex(0);
-  }, [post._id]);
+  }, [post?._id]);
 
   useEffect(() => {
     if (user?.following && author?._id) {
@@ -64,11 +59,13 @@ export default function PostCard({ post, onRefresh }) {
   };
 
   const handleShare = async () => {
-    const postLink = `${window.location.origin}/post/${post._id}`;
+    const postLink = `${window.location.origin}/post/${post?._id}`;
     try {
       await navigator.clipboard.writeText(postLink);
       showToast();
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const handleAction = async (type) => {
@@ -105,6 +102,10 @@ export default function PostCard({ post, onRefresh }) {
 
   const isLiked = user ? post.like?.some(id => id.toString() === user._id.toString()) : false;
   const isBookmarked = user ? post.bookmark?.some(id => id.toString() === user._id.toString()) : false;
+
+  if (!post || !post._id) {
+    return null;
+  }
 
   // Swipe handlers - optimized for mobile
   const minSwipeDistance = 30; // Lower threshold for easier swiping on mobile
@@ -192,21 +193,34 @@ export default function PostCard({ post, onRefresh }) {
     return `${import.meta.env.VITE_API_URL?.replace(/\/api$/, "")}${img}`;
   };
 
+  const getAvatarUrl = (photoPath) => {
+    if (!photoPath) return "";
+    if (photoPath.startsWith("http")) return photoPath;
+    const base = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api$/, "");
+    return `${base}${photoPath}`;
+  };
+
   return (
     <>
       <article 
         className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer group"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         <div className="px-3 md:px-4 py-3">
           <div className="flex gap-2 md:gap-3">
             <Link 
               to={`/profile/${author._id}`}
-              className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-xs md:text-sm flex-shrink-0 hover:opacity-90 transition-opacity touch-manipulation"
+              className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center font-semibold uppercase text-white text-xs md:text-sm flex-shrink-0 hover:opacity-90 transition-opacity touch-manipulation overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {author.name?.[0] || author.username?.[0] || "U"}
+              {author?.profilePhoto ? (
+                <img
+                  src={getAvatarUrl(author.profilePhoto)}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                (author.name?.[0] || author.username?.[0] || "U")
+              )}
             </Link>
 
             <div className="flex-1 min-w-0">

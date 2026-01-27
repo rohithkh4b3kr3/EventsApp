@@ -1,12 +1,19 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextContext";
 import IITMLogo from "../assets/iitm.png";
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const getAvatarUrl = (photoPath) => {
+    if (!photoPath) return "";
+    if (photoPath.startsWith("http")) return photoPath;
+    const base = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api$/, "");
+    return `${base}${photoPath}`;
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -28,7 +35,7 @@ export default function Navbar() {
 
         <div>
           <p className="text-xl font-extrabold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent tracking-tight">
-            Events Hub
+            InstiEvents
           </p>
           <p className="text-[11px] text-slate-400 tracking-wider font-medium -mt-1">IIT Madras</p>
         </div>
@@ -73,9 +80,17 @@ export default function Navbar() {
           <>
             {/* Avatar */}
             <div className="flex items-center gap-2 ml-3 px-3 py-1.5 bg-slate-800/60 rounded-2xl border border-slate-700 shadow-md">
-              <span className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-bold uppercase">
-                {user.name?.[0] || user.username?.[0] || "U"}
-              </span>
+              {user?.profilePhoto ? (
+                <img
+                  src={getAvatarUrl(user.profilePhoto)}
+                  alt="Profile"
+                  className="h-9 w-9 rounded-full object-cover border border-slate-700"
+                />
+              ) : (
+                <span className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-bold uppercase">
+                  {user.name?.[0] || user.username?.[0] || "U"}
+                </span>
+              )}
               <p className="text-slate-300 font-semibold hidden lg:block">
                 {user.name}
               </p>
