@@ -32,11 +32,11 @@ export const updateProfilePhoto = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
 
-    if (!req.file) {
-      return res.status(400).json({ message: "Profile photo is required", success: false });
-    }
+    const { profilePhoto } = req.body;
 
-    const profilePhoto = `/uploads/${req.file.filename}`;
+    if (!profilePhoto) {
+      return res.status(400).json({ message: "Profile photo URL is required", success: false });
+    }
 
     const user = await User.findByIdAndUpdate(
       loggedInUserId,

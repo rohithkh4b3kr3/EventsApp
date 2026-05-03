@@ -13,6 +13,7 @@ import ClubChatMessage from "./models/ClubChatMessageModel.js";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
+import UploadRoute from "./routes/UploadRoute.js";
 
 dotenv.config();
 const app = express();
@@ -37,12 +38,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookiesParser());
 
-const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-app.use("/uploads", express.static(uploadsDir));
-
 dbConnection();
 
 app.get("/", (req, res) => {
@@ -52,6 +47,7 @@ app.get("/", (req, res) => {
 app.use("/api/user", UserRoute);
 app.use("/api/post", PostRoute);
 app.use("/api/chat", ChatRoute);
+app.use("/api/upload", UploadRoute);
 
 const io = new SocketIOServer(server, {
   cors: {

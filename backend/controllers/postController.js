@@ -4,7 +4,7 @@ import User from "../models/UserModel.js";
 // CREATE POST
 export const createPost = async (req, res) => {
   try {
-    const { description, picturePath, eventDate, eventTime, venue } = req.body;
+    const { description, picturePath, eventDate, eventTime, venue, images } = req.body;
     const userId = req.user._id; // logged-in user
 
     if (req.user?.userType !== "club") {
@@ -24,14 +24,12 @@ export const createPost = async (req, res) => {
       return res.status(400).json({ msg: "Invalid event date", success: false });
     }
 
-    // Handle multiple images (from req.files array) or single image (from req.file)
+    // Handle multiple images from req.body
     let imagePaths = [];
-    if (req.files && req.files.length > 0) {
-      // Multiple images
-      imagePaths = req.files.map(file => `/uploads/${file.filename}`);
-    } else if (req.file) {
-      // Single image (backward compatibility)
-      imagePaths = [`/uploads/${req.file.filename}`];
+    if (images && Array.isArray(images)) {
+      imagePaths = images;
+    } else if (images && typeof images === "string") {
+      imagePaths = [images];
     } else if (picturePath) {
       imagePaths = [picturePath];
     }

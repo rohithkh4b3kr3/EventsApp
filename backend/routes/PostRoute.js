@@ -14,26 +14,11 @@ import {
   getClubEvents,
 } from "../controllers/postController.js";
 import isAuthenticated from "../config/auth.js";
-import multer from "multer";
-import path from "path";
-
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
-  },
-});
-
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
-});
 
 const router = express.Router();
 
 // Support both single and multiple images
-router.post("/create", isAuthenticated, upload.array("images", 10), createPost); // Max 10 images
+router.post("/create", isAuthenticated, createPost);
 router.delete("/delete/:id", isAuthenticated, deletePost);
 router.put("/like/:id", isAuthenticated, likeOrDislike);
 router.put("/comment/:id", isAuthenticated, addComment);
